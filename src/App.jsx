@@ -4,9 +4,8 @@ import {
   Filter, BookOpen, MapPin, Clock, Phone, HelpCircle, 
   Users, Baby, Plane, BriefcaseMedical, Menu, ChevronRight, ChevronDown, 
   Stethoscope, Book, TicketPercent, Lock, Unlock, Eye, EyeOff, Save, Edit3, CloudUpload, WifiOff, Plus, Trash2,
-  CalendarCheck, Settings2, CheckSquare, Square, CheckCircle, AlertCircle, User, LogOut,
-  // IMPORTANTE: Renombramos 'Map' a 'MapIcon' para evitar conflictos con el objeto Map de JS que usa Firebase
-  Map as MapIcon 
+  CalendarCheck, Settings2, CheckSquare, Square, CheckCircle, AlertCircle, User, LogOut
+  // NOTA: Se eliminó la importación de 'Map' para evitar conflictos críticos con el objeto Map de JavaScript
 } from 'lucide-react';
 
 // --- IMPORTAR FIREBASE ---
@@ -19,8 +18,9 @@ import {
 } from "firebase/auth";
 
 // --- CONFIGURACIÓN DE FIREBASE ---
+// ¡¡IMPORTANTE!!: REEMPLAZA ESTO CON TUS DATOS REALES DE FIREBASE CONSOLE
 const firebaseConfig = {
-  apiKey: "AIzaSyAeePk1erddZcP3LrLALMfjLeAIGtUzS5A",
+  apiKey: "AIzaSyAeePk1erddZcP3LrLALMfjLeAIGtUzS5A", // <--- Pega tu API KEY aquí
   authDomain: "vademecum-keralty.firebaseapp.com",
   projectId: "vademecum-keralty",
   storageBucket: "vademecum-keralty.firebasestorage.app",
@@ -28,23 +28,25 @@ const firebaseConfig = {
   appId: "1:180320538220:web:bf0d99772ea2cec7c85249"
 };
 
-// Inicializar Firebase de forma segura con Singleton Pattern
+// Inicializar Firebase de forma segura
 let app = null;
 let db = null;
 let auth = null;
 let firebaseError = null;
 
 try {
-  // Inicialización simplificada y robusta
-  if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApp();
+  // Solo inicializamos si la API Key no es el placeholder genérico o si el usuario la ha configurado
+  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
+    // Patrón Singleton para evitar reinicializaciones que causan errores
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApp();
+    }
+    
+    db = getFirestore(app);
+    auth = getAuth(app);
   }
-  
-  db = getFirestore(app);
-  auth = getAuth(app);
-  
 } catch (e) {
   console.error("Error inicializando Firebase:", e);
   firebaseError = e.message;
@@ -444,7 +446,7 @@ const EditLocationModal = ({ isOpen, onClose, locationData, onSave, showToast })
     const [data, setData] = useState(locationData);
 
     useEffect(() => {
-        if(isOpen) setData(locationData);
+        if(isOpen && locationData) setData(locationData);
     }, [isOpen, locationData]);
 
     if (!isOpen) return null;
@@ -468,24 +470,24 @@ const EditLocationModal = ({ isOpen, onClose, locationData, onSave, showToast })
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-gray-700">Nombre del Centro</label>
-                        <input name="placeName" value={data.placeName} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                        <input name="placeName" value={data.placeName || ''} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700">Dirección</label>
-                        <input name="address" value={data.address} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                        <input name="address" value={data.address || ''} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700">Horarios</label>
-                        <textarea name="hours" value={data.hours} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" rows="2" />
+                        <textarea name="hours" value={data.hours || ''} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" rows="2" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-bold text-gray-700">Teléfono</label>
-                            <input name="phone" value={data.phone} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                            <input name="phone" value={data.phone || ''} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700">Extensión</label>
-                            <input name="ext" value={data.ext} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                            <input name="ext" value={data.ext || ''} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
@@ -1267,7 +1269,8 @@ const LocationView = ({ isAdmin, locationData, onEdit }) => (
           </div>
 
           <div className="flex items-start gap-4">
-            <div className="bg-[#00B288]/10 p-3 rounded-lg text-[#00B288]"><MapIcon size={24} /></div>
+            {/* Se reemplazó MapIcon por MapPin para evitar conflicto de nombres */}
+            <div className="bg-[#00B288]/10 p-3 rounded-lg text-[#00B288]"><MapPin size={24} /></div>
             <div>
               <h3 className="font-bold text-[#002E58] text-lg">Dirección</h3>
               <p className="mt-1 text-gray-600">
@@ -1354,20 +1357,26 @@ export default function VademecumApp() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
 
-  // Estados locales para nuevas funcionalidades
+  // Estados locales con manejo de errores de parsing (CRÍTICO PARA EVITAR PANTALLA BLANCA)
   const [locationData, setLocationData] = useState(() => {
-      try { return JSON.parse(localStorage.getItem('locationData')) || initialLocationData; } 
-      catch { return initialLocationData; }
+      try { 
+          const saved = localStorage.getItem('locationData');
+          return saved ? JSON.parse(saved) : initialLocationData; 
+      } catch { return initialLocationData; }
   });
 
   const [faqs, setFaqs] = useState(() => {
-      try { return JSON.parse(localStorage.getItem('faqs')) || initialFaqs; }
-      catch { return initialFaqs; }
+      try { 
+          const saved = localStorage.getItem('faqs');
+          return saved ? JSON.parse(saved) : initialFaqs; 
+      } catch { return initialFaqs; }
   });
 
   const [pediatricSchedule, setPediatricSchedule] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('pediatricSchedule')) || initialPediatricSchedule; } 
-    catch { return initialPediatricSchedule; }
+    try { 
+        const saved = localStorage.getItem('pediatricSchedule');
+        return saved ? JSON.parse(saved) : initialPediatricSchedule; 
+    } catch { return initialPediatricSchedule; }
   });
 
   const [editingScheduleItem, setEditingScheduleItem] = useState(null);
@@ -1383,7 +1392,7 @@ export default function VademecumApp() {
   
   const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
-  // PERSISTENCIA LOCAL (Simulada para demo)
+  // PERSISTENCIA LOCAL
   useEffect(() => { localStorage.setItem('pediatricSchedule', JSON.stringify(pediatricSchedule)); }, [pediatricSchedule]);
   useEffect(() => { localStorage.setItem('locationData', JSON.stringify(locationData)); }, [locationData]);
   useEffect(() => { localStorage.setItem('faqs', JSON.stringify(faqs)); }, [faqs]);
