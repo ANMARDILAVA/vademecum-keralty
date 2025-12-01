@@ -4,16 +4,16 @@ import {
   Filter, BookOpen, MapPin, Clock, Phone, HelpCircle, 
   Users, Baby, Plane, BriefcaseMedical, Menu, ChevronRight, ChevronDown, 
   Stethoscope, Book, TicketPercent, Lock, Unlock, Eye, EyeOff, Save, Edit3, CloudUpload, WifiOff, Plus, Trash2,
-  CalendarCheck, Settings2, CheckSquare, Square
+  CalendarCheck, Settings2, CheckSquare, Square, CheckCircle, AlertCircle, Map
 } from 'lucide-react';
 
 // --- IMPORTAR FIREBASE ---
 import { initializeApp } from "firebase/app";
 import { 
-  getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDocs, addDoc, deleteDoc 
+  getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc 
 } from "firebase/firestore";
 
-// --- CONFIGURACIÓN DE FIREBASE (¡REEMPLAZAR CON TUS DATOS REALES!) ---
+// --- CONFIGURACIÓN DE FIREBASE (Datos del usuario) ---
 const firebaseConfig = {
   apiKey: "AIzaSyAeePk1erddZcP3LrLALMfjLeAIGtUzS5A",
   authDomain: "vademecum-keralty.firebaseapp.com",
@@ -23,31 +23,29 @@ const firebaseConfig = {
   appId: "1:180320538220:web:bf0d99772ea2cec7c85249"
 };
 
-// Inicializar Firebase de forma segura
+// Inicializar Firebase de forma segura con fallback
 let db = null;
 try {
   if (firebaseConfig.apiKey !== "TU_API_KEY") {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
-  } else {
-    console.log("Configuración de Firebase pendiente. Iniciando en modo local.");
   }
 } catch (e) {
-  console.warn("Error inicializando Firebase. Usando modo memoria.", e);
+  console.warn("Firebase no disponible o error de configuración. Iniciando modo offline.", e);
 }
 
-// --- COLORES CORPORATIVOS KERALTY (Manual V3 - Pág 17) ---
-const KERALTY_COLORS = {
-  blueDeep: '#002E58',   // Pantone 288 C (Fondos oscuros, Sidebar)
-  blueMain: '#002F87',   // Pantone 287 C (Botones, Textos principales)
-  blueLight: '#0071A3',  // Pantone 307 C (Subtítulos)
-  cyan: '#00B4E3',       // Pantone 306 C (Acentos, Iconos)
-  greenLight: '#8CC63F', // Pantone 376 C (Acentos, Activos)
-  greenTeal: '#00B288',  // Pantone 339 C (Detalles)
-  gray: '#8C9DA3',       // Pantone 400 C (Textos secundarios)
+// --- COLORES CORPORATIVOS ---
+const THEME = {
+    blueDeep: '#002E58',   // Pantone 288 C
+    blueMain: '#002F87',   // Pantone 287 C
+    blueLight: '#0071A3',  // Pantone 307 C
+    cyan: '#00B4E3',       // Pantone 306 C
+    greenLight: '#8CC63F', // Pantone 376 C
+    greenTeal: '#00B288',  // Pantone 339 C
+    gray: '#8C9DA3',       // Pantone 400 C
 };
 
-// --- BASE DE DATOS INICIAL (Respaldo Local) ---
+// --- BASE DE DATOS LOCAL (Respaldo) ---
 const initialVaccineDatabase = [
   {
     id: 'gardasil',
@@ -176,20 +174,6 @@ const initialVaccineDatabase = [
     isVisible: true
   },
   {
-    id: 'infanrixpenta',
-    name: 'INFANRIX PENTA / PENTAXIM',
-    type: 'Combinada',
-    category: 'Pediátrica',
-    prevention: 'Difteria, Tétanos, Tos ferina, Polio, Hib',
-    diseaseDescription: 'Protección 5-en-1 contra múltiples patógenos (excluyendo Hep B).',
-    scheme: 'Refuerzo a los 18 meses o esquema primario.',
-    route: 'Intramuscular',
-    complications: 'Llanto persistente, fiebre >38°C.',
-    contraindications: 'Hipersensibilidad a componentes.',
-    promoted: false,
-    isVisible: true
-  },
-  {
     id: 'priorix',
     name: 'PRIORIX',
     type: 'Viral',
@@ -200,34 +184,6 @@ const initialVaccineDatabase = [
     route: 'Subcutánea',
     complications: 'Fiebre entre 7-12 días post vacunación.',
     contraindications: 'Embarazo, inmunosupresión.',
-    promoted: false,
-    isVisible: true
-  },
-  {
-    id: 'twinrix',
-    name: 'TWINRIX',
-    type: 'Viral',
-    category: 'Viajero/Adulto',
-    prevention: 'Hepatitis A y Hepatitis B',
-    diseaseDescription: 'Protección dual hepática. Transmisión fecal-oral y por fluidos.',
-    scheme: '0, 1, 6 meses. Esquema acelerado disponible.',
-    route: 'Intramuscular',
-    complications: 'Cefalea, fatiga.',
-    contraindications: 'Hipersensibilidad.',
-    promoted: false,
-    isVisible: true
-  },
-  {
-    id: 'menveo',
-    name: 'MENVEO / MENACTRA / NIMENRIX',
-    type: 'Bacteriana',
-    category: 'Pediátrica/Adolescente',
-    prevention: 'Meningococo (Serogrupos A, C, W, Y)',
-    diseaseDescription: 'Enfermedad meningocócica invasiva: Meningitis y sepsis.',
-    scheme: 'Variable según edad y marca.',
-    route: 'Intramuscular',
-    complications: 'Dolor muscular, cefalea.',
-    contraindications: 'Síndrome de Guillain-Barré previo.',
     promoted: false,
     isVisible: true
   },
@@ -274,31 +230,17 @@ const initialVaccineDatabase = [
     isVisible: true
   },
   {
-    id: 'adacel',
-    name: 'ADACEL / TETRAXIM',
-    type: 'Bacteriana',
-    category: 'Refuerzo',
-    prevention: 'Difteria, Tétanos, Tos ferina',
-    diseaseDescription: 'Refuerzo de inmunidad (Tdap) y protección capullo.',
-    scheme: 'Refuerzo escolar o cada 10 años.',
-    route: 'Intramuscular',
-    complications: 'Dolor en el sitio.',
-    contraindications: 'Encefalopatía previa.',
-    promoted: false,
-    isVisible: true
-  },
-  {
-    id: 'avaxim',
-    name: 'AVAXIM 160 / AVAXIM 80',
+    id: 'influenza',
+    name: 'VAXIGRIP / INFLUVAC / FLUZONE',
     type: 'Viral',
-    category: 'Adulto/Pediátrico',
-    prevention: 'Hepatitis A',
-    diseaseDescription: 'Inflamación del hígado altamente contagiosa.',
-    scheme: '2 Dosis separadas por 6-12 meses.',
+    category: 'Estacional',
+    prevention: 'Influenza (Gripe)',
+    diseaseDescription: 'Infección viral respiratoria aguda grave.',
+    scheme: 'Anual.',
     route: 'Intramuscular',
-    complications: 'Dolor leve.',
-    contraindications: 'Enfermedad febril aguda grave.',
-    promoted: false,
+    complications: 'Malestar general, fiebre baja.',
+    contraindications: 'Alergia severa al huevo.',
+    promoted: true,
     isVisible: true
   },
   {
@@ -315,120 +257,9 @@ const initialVaccineDatabase = [
     alert: 'Contraindicado en alergia al huevo.',
     promoted: false,
     isVisible: true
-  },
-  {
-    id: 'typhim',
-    name: 'TYPHIM VI',
-    type: 'Bacteriana',
-    category: 'Viajero',
-    prevention: 'Fiebre Tifoidea',
-    diseaseDescription: 'Infección bacteriana sistémica por Salmonella Typhi.',
-    scheme: 'Una dosis 2 semanas antes del viaje.',
-    route: 'Intramuscular',
-    complications: 'Dolor local.',
-    contraindications: 'Hipersensibilidad.',
-    promoted: false,
-    isVisible: true
-  },
-  {
-    id: 'influenza',
-    name: 'VAXIGRIP / INFLUVAC / FLUZONE',
-    type: 'Viral',
-    category: 'Estacional',
-    prevention: 'Influenza (Gripe)',
-    diseaseDescription: 'Infección viral respiratoria aguda grave.',
-    scheme: 'Anual.',
-    route: 'Intramuscular',
-    complications: 'Malestar general, fiebre baja.',
-    contraindications: 'Alergia severa al huevo.',
-    promoted: true,
-    isVisible: true
-  },
-  {
-    id: 'verorab',
-    name: 'VERORAB',
-    type: 'Viral',
-    category: 'Urgencia/Viajero',
-    prevention: 'Rabia',
-    diseaseDescription: 'Enfermedad viral mortal del sistema nervioso.',
-    scheme: 'Pre o Post exposición (Protocolo médico).',
-    route: 'Intramuscular',
-    complications: 'Adenopatías, mareos.',
-    contraindications: 'Ninguna en post-exposición.',
-    alert: 'En post-exposición no hay contraindicaciones.',
-    promoted: false,
-    isVisible: true
-  },
-  {
-    id: 'tetanico',
-    name: 'T. TETÁNICO / TOXOIDE',
-    type: 'Bacteriana',
-    category: 'Urgencia',
-    prevention: 'Tétanos',
-    diseaseDescription: 'Rigidez muscular dolorosa por toxina bacteriana.',
-    scheme: 'Manejo de heridas.',
-    route: 'Intramuscular',
-    complications: 'Nódulo en sitio de aplicación.',
-    contraindications: 'Hipersensibilidad grave previa.',
-    promoted: false,
-    isVisible: true
-  },
-  {
-    id: 'qdenga',
-    name: 'QDENGA',
-    type: 'Viral',
-    category: 'Viajero/Endémica',
-    prevention: 'Dengue',
-    diseaseDescription: 'Enfermedad viral "rompehuesos" transmitida por mosquitos.',
-    scheme: '2 dosis (0 y 3 meses).',
-    route: 'Subcutánea',
-    complications: 'Dolor en sitio, cefalea, mialgia.',
-    contraindications: 'Embarazo, lactancia, inmunosupresión.',
-    promoted: false,
-    isVisible: true
-  },
-  {
-    id: 'elovac',
-    name: 'ELOVAC',
-    type: 'Bacteriana',
-    category: 'Otros',
-    prevention: 'Infecciones Recurrentes (Lisado)',
-    diseaseDescription: 'Inmunomodulador bacteriano.',
-    scheme: 'Consultar ficha técnica.',
-    route: 'Consultar',
-    complications: 'Consultar.',
-    contraindications: 'Consultar.',
-    promoted: false,
-    isVisible: true
   }
 ];
 
-// --- PALETA KERALTY (Basada en Manual Identidad V3 - Pág 16/17) ---
-const colorThemes = [
-  // Azul Corporativo (Pantone 287 C) - Base principal
-  { bg: 'bg-[#002F87]/5', border: 'border-[#002F87]/20', bar: 'bg-[#002F87]', text: 'text-[#002E58]', icon: 'text-[#002F87]', tag: 'bg-[#002F87]/10 text-[#002F87]' },
-  // Verde Keralty (Pantone 376 C) - Acentos frescos
-  { bg: 'bg-[#8CC63F]/5', border: 'border-[#8CC63F]/30', bar: 'bg-[#8CC63F]', text: 'text-[#002E58]', icon: 'text-[#8CC63F]', tag: 'bg-[#8CC63F]/10 text-[#4E9D2D]' },
-  // Azul Cian (Pantone 306 C) - Bienestar
-  { bg: 'bg-[#00B4E3]/5', border: 'border-[#00B4E3]/20', bar: 'bg-[#00B4E3]', text: 'text-[#002E58]', icon: 'text-[#00B4E3]', tag: 'bg-[#00B4E3]/10 text-[#0071A3]' },
-  // Verde Teal (Pantone 339 C) - Salud
-  { bg: 'bg-[#00B288]/5', border: 'border-[#00B288]/30', bar: 'bg-[#00B288]', text: 'text-[#002E58]', icon: 'text-[#00B288]', tag: 'bg-[#00B288]/10 text-[#007F60]' },
-  // Azul Medio (Pantone 279 C) - Confianza
-  { bg: 'bg-[#3E8EDE]/5', border: 'border-[#3E8EDE]/20', bar: 'bg-[#3E8EDE]', text: 'text-[#002E58]', icon: 'text-[#3E8EDE]', tag: 'bg-[#3E8EDE]/10 text-[#005C9E]' },
-  // Gris Corporativo (Pantone 400 C) - Neutro/Elegante
-  { bg: 'bg-slate-50', border: 'border-slate-200', bar: 'bg-[#8C9DA3]', text: 'text-[#002E58]', icon: 'text-[#8C9DA3]', tag: 'bg-slate-100 text-slate-600' },
-];
-
-const getThemeForVaccine = (index) => colorThemes[index % colorThemes.length];
-
-const faqData = [
-  { q: "¿Qué debo hacer si presento fiebre después de la vacuna?", a: "Es común presentar febrícula o fiebre leve (<38.5°C). Puede administrar antipiréticos (paracetamol) según indicación médica, hidratarse bien y usar paños tibios. Si la fiebre persiste más de 48 horas, consulte." },
-  { q: "¿Puedo beber alcohol después de vacunarme?", a: "No hay una contraindicación absoluta, pero se recomienda evitar el exceso de alcohol las primeras 24-48 horas para no enmascarar posibles efectos adversos como dolor de cabeza o malestar." },
-  { q: "¿Se pueden administrar varias vacunas el mismo día?", a: "Sí, la mayoría de las vacunas (inactivadas y vivas) se pueden administrar simultáneamente en sitios anatómicos diferentes sin riesgo adicional." },
-  { q: "¿Qué hago si se me forma un bulto en el sitio de inyección?", a: "Puede aparecer un nódulo o induración. Generalmente desaparece solo en semanas. Si hay calor, rubor intenso o dolor severo, podría ser un absceso y requiere valoración médica." },
-];
-
-// --- DATOS INICIALES DE ESQUEMA PEDIÁTRICO (Semilla) ---
 const initialPediatricSchedule = [
   { age: 'Recién Nacido (0 Meses)', vaccineIds: [] }, 
   { age: '2 Meses', vaccineIds: ['infanrixhexa', 'prevenar', 'rotateq', 'vaxneuvance'] },
@@ -440,10 +271,61 @@ const initialPediatricSchedule = [
   { age: '5 Años', vaccineIds: ['priorix', 'adacel', 'proquad', 'tetraxim', 'boostrix'] },
 ];
 
-// --- COMPONENTES AUXILIARES ---
+const initialLocationData = {
+    hours: "Todos los días: 8:00 AM - 6:00 PM",
+    address: "Carrera 14 #96-22, Bogotá",
+    phone: "5895455",
+    ext: "5718033",
+    placeName: "Centro Médico Colsanitas Premium Calle 96"
+};
 
-// MODAL PARA AGREGAR VACUNA NUEVA
-const AddVaccineModal = ({ isOpen, onClose, onAdd }) => {
+const initialFaqs = [
+  { id: 1, q: "¿Qué debo hacer si presento fiebre después de la vacuna?", a: "Es común presentar febrícula o fiebre leve (<38.5°C). Puede administrar antipiréticos (paracetamol) según indicación médica, hidratarse bien y usar paños tibios. Si la fiebre persiste más de 48 horas, consulte." },
+  { id: 2, q: "¿Puedo beber alcohol después de vacunarme?", a: "No hay una contraindicación absoluta, pero se recomienda evitar el exceso de alcohol las primeras 24-48 horas para no enmascarar posibles efectos adversos como dolor de cabeza o malestar." },
+  { id: 3, q: "¿Se pueden administrar varias vacunas el mismo día?", a: "Sí, la mayoría de las vacunas (inactivadas y vivas) se pueden administrar simultáneamente en sitios anatómicos diferentes sin riesgo adicional." },
+  { id: 4, q: "¿Qué hago si se me forma un bulto en el sitio de inyección?", a: "Puede aparecer un nódulo o induración. Generalmente desaparece solo en semanas. Si hay calor, rubor intenso o dolor severo, podría ser un absceso y requiere valoración médica." },
+];
+
+const colorThemes = [
+  { bg: 'bg-[#002F87]/5', border: 'border-[#002F87]/20', bar: 'bg-[#002F87]', text: 'text-[#002E58]', icon: 'text-[#002F87]', tag: 'bg-[#002F87]/10 text-[#002F87]' },
+  { bg: 'bg-[#8CC63F]/5', border: 'border-[#8CC63F]/30', bar: 'bg-[#8CC63F]', text: 'text-[#002E58]', icon: 'text-[#8CC63F]', tag: 'bg-[#8CC63F]/10 text-[#4E9D2D]' },
+  { bg: 'bg-[#00B4E3]/5', border: 'border-[#00B4E3]/20', bar: 'bg-[#00B4E3]', text: 'text-[#002E58]', icon: 'text-[#00B4E3]', tag: 'bg-[#00B4E3]/10 text-[#0071A3]' },
+  { bg: 'bg-[#00B288]/5', border: 'border-[#00B288]/30', bar: 'bg-[#00B288]', text: 'text-[#002E58]', icon: 'text-[#00B288]', tag: 'bg-[#00B288]/10 text-[#007F60]' },
+  { bg: 'bg-[#3E8EDE]/5', border: 'border-[#3E8EDE]/20', bar: 'bg-[#3E8EDE]', text: 'text-[#002E58]', icon: 'text-[#3E8EDE]', tag: 'bg-[#3E8EDE]/10 text-[#005C9E]' },
+  { bg: 'bg-slate-50', border: 'border-slate-200', bar: 'bg-[#8C9DA3]', text: 'text-[#002E58]', icon: 'text-[#8C9DA3]', tag: 'bg-slate-100 text-slate-600' },
+];
+
+const getThemeForVaccine = (index) => colorThemes[index % colorThemes.length];
+
+// --- COMPONENTE TOAST (Notificaciones) ---
+const ToastContainer = ({ toasts, removeToast }) => {
+  return (
+    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+      {toasts.map(toast => (
+        <div 
+          key={toast.id} 
+          className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium animate-in slide-in-from-right fade-in duration-300 ${
+            toast.type === 'error' ? 'bg-red-500' : 
+            toast.type === 'success' ? 'bg-[#8CC63F] text-[#002E58]' : 
+            'bg-[#002F87]'
+          }`}
+        >
+          {toast.type === 'success' ? <CheckCircle size={16}/> : 
+           toast.type === 'error' ? <AlertCircle size={16}/> : 
+           <Info size={16}/>}
+          {toast.message}
+          <button onClick={() => removeToast(toast.id)} className="ml-2 opacity-70 hover:opacity-100">
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// --- MODALES ---
+
+const AddVaccineModal = ({ isOpen, onClose, onAdd, showToast }) => {
   const [formData, setFormData] = useState({
     name: '', type: 'Viral', category: 'Adulto', prevention: '',
     diseaseDescription: '', scheme: '', route: 'Intramuscular',
@@ -454,7 +336,10 @@ const AddVaccineModal = ({ isOpen, onClose, onAdd }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name) return alert("El nombre es obligatorio");
+    if (!formData.name) {
+        showToast("El nombre es obligatorio", "error");
+        return;
+    }
     const newVaccine = { ...formData, id: Date.now().toString() };
     onAdd(newVaccine);
     onClose();
@@ -528,7 +413,7 @@ const AddVaccineModal = ({ isOpen, onClose, onAdd }) => {
              <label className="block text-sm font-bold text-[#002E58]">Contraindicaciones</label>
              <textarea name="contraindications" value={formData.contraindications} onChange={handleChange} className="w-full border p-2 rounded focus:ring-2 focus:ring-[#00B4E3]" rows="2" />
           </div>
-          
+           
           <div className="pt-4 border-t flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
             <button type="submit" className="px-6 py-2 bg-[#002F87] text-white rounded font-bold hover:bg-[#002E58]">Guardar Biológico</button>
@@ -539,7 +424,114 @@ const AddVaccineModal = ({ isOpen, onClose, onAdd }) => {
   );
 };
 
-// MODAL PARA EDITAR ESQUEMA
+const EditLocationModal = ({ isOpen, onClose, locationData, onSave, showToast }) => {
+    const [data, setData] = useState(locationData);
+
+    useEffect(() => {
+        if(isOpen) setData(locationData);
+    }, [isOpen, locationData]);
+
+    if (!isOpen) return null;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(data);
+        onClose();
+        showToast("Información de ubicación actualizada", "success");
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold text-[#002E58] mb-4 flex items-center gap-2"><Edit3 size={20}/> Editar Ubicación y Horarios</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700">Nombre del Centro</label>
+                        <input name="placeName" value={data.placeName} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700">Dirección</label>
+                        <input name="address" value={data.address} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700">Horarios</label>
+                        <textarea name="hours" value={data.hours} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" rows="2" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700">Teléfono</label>
+                            <input name="phone" value={data.phone} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700">Extensión</label>
+                            <input name="ext" value={data.ext} onChange={handleChange} className="w-full border rounded p-2 focus:ring-2 focus:ring-[#002F87]" />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                        <button type="submit" className="px-4 py-2 bg-[#002F87] text-white rounded hover:bg-[#002E58]">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const EditFAQModal = ({ isOpen, onClose, faq, onSave }) => {
+    const [data, setData] = useState({ q: '', a: '' });
+
+    useEffect(() => {
+        if(isOpen && faq) setData(faq);
+        else if (isOpen) setData({ q: '', a: '' });
+    }, [isOpen, faq]);
+
+    if(!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold text-[#002E58] mb-4">{faq ? 'Editar Pregunta' : 'Nueva Pregunta'}</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700">Pregunta</label>
+                        <input 
+                            className="w-full border rounded p-2" 
+                            value={data.q} 
+                            onChange={e => setData(p => ({...p, q: e.target.value}))}
+                            placeholder="¿Cuál es la pregunta?"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700">Respuesta</label>
+                        <textarea 
+                            className="w-full border rounded p-2" 
+                            rows="4"
+                            value={data.a} 
+                            onChange={e => setData(p => ({...p, a: e.target.value}))}
+                            placeholder="Escriba la respuesta detallada..."
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                        <button 
+                            onClick={() => { onSave(data); onClose(); }} 
+                            className="px-4 py-2 bg-[#002F87] text-white rounded hover:bg-[#002E58]"
+                            disabled={!data.q || !data.a}
+                        >
+                            Guardar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ScheduleEditModal = ({ isOpen, onClose, ageGroup, allVaccines, currentVaccineIds, onSave }) => {
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -604,7 +596,7 @@ const ScheduleEditModal = ({ isOpen, onClose, ageGroup, allVaccines, currentVacc
   );
 };
 
-const LoginModal = ({ isOpen, onClose, onLogin }) => {
+const LoginModal = ({ isOpen, onClose, onLogin, showToast }) => {
   const [code, setCode] = useState('');
   const [error, setError] = useState(false);
 
@@ -617,8 +609,10 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
       onClose();
       setCode('');
       setError(false);
+      showToast("Bienvenido, Administrador", "success");
     } else {
       setError(true);
+      showToast("Código incorrecto", "error");
     }
   };
 
@@ -650,6 +644,22 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
       </div>
     </div>
   );
+};
+
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <h3 className="text-lg font-bold text-[#002E58] mb-2">{title}</h3>
+                <p className="text-gray-600 mb-6">{message}</p>
+                <div className="flex gap-2 justify-end">
+                    <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                    <button onClick={() => { onConfirm(); onClose(); }} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 const DetailModal = ({ vaccine, onClose, isAdmin, onUpdate }) => {
@@ -691,7 +701,7 @@ const DetailModal = ({ vaccine, onClose, isAdmin, onUpdate }) => {
                 </span>
               )}
             </div>
-           
+            
             {isEditing ? (
               <input 
                 className="text-2xl font-bold leading-tight bg-white/20 border-b border-white text-white w-full placeholder-white/50 outline-none rounded px-1"
@@ -803,7 +813,7 @@ const DetailModal = ({ vaccine, onClose, isAdmin, onUpdate }) => {
               )}
             </div>
           </div>
-          
+           
           <div>
             <h3 className="font-bold text-[#002E58] mb-2 flex items-center gap-2"><Activity size={18} /> Complicaciones / ESAVI</h3>
             {isEditing ? (
@@ -841,7 +851,7 @@ const DetailModal = ({ vaccine, onClose, isAdmin, onUpdate }) => {
   );
 };
 
-const VaccineCard = ({ vac, onClick, isAdmin, onToggleVisibility, onTogglePromo, onDelete, minimal = false }) => {
+const VaccineCard = ({ vac, onClick, isAdmin, onToggleVisibility, onTogglePromo, onRequestDelete, minimal = false }) => {
   const originalIndex = initialVaccineDatabase.findIndex(v => v.id === vac.id);
   const theme = getThemeForVaccine(Math.max(0, originalIndex));
   
@@ -892,7 +902,7 @@ const VaccineCard = ({ vac, onClick, isAdmin, onToggleVisibility, onTogglePromo,
           <button 
             onClick={(e) => { 
               e.stopPropagation(); 
-              if(confirm('¿Estás seguro de eliminar este biológico permanentemente?')) onDelete(vac); 
+              onRequestDelete(vac);
             }}
             className="p-1.5 rounded-full shadow-sm border bg-red-100 text-red-600 border-red-200 hover:bg-red-500 hover:text-white transition-colors"
             title="Eliminar Biológico"
@@ -930,8 +940,8 @@ const VaccineCard = ({ vac, onClick, isAdmin, onToggleVisibility, onTogglePromo,
 
 // --- VISTAS PRINCIPALES ---
 
-const DiseasesDictionaryView = ({ vaccines, onSelectVaccine }) => {
-  const visibleVaccines = vaccines.filter(v => v.isVisible);
+const DiseasesDictionaryView = ({ vaccines, onSelectVaccine, isAdmin, onToggleVisibility }) => {
+  const visibleVaccines = vaccines.filter(v => isAdmin || v.isVisible);
   const sortedData = [...visibleVaccines].sort((a, b) => a.prevention.localeCompare(b.prevention));
 
   return (
@@ -941,16 +951,18 @@ const DiseasesDictionaryView = ({ vaccines, onSelectVaccine }) => {
           <Book className="text-[#002F87]" /> Diccionario de Patologías
         </h2>
         <p className="text-[#8C9DA3]">Guía rápida de enfermedades prevenibles por vacunación.</p>
+        {isAdmin && <p className="text-xs text-[#00B4E3] mt-2 flex items-center gap-1"><Info size={12}/> Puede editar el contenido de las patologías haciendo clic en "Editar / Ver".</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-4">
         {sortedData.map((vac) => (
-          <div key={vac.id} className="bg-white p-5 rounded-lg border-l-4 border-[#002F87] shadow-sm hover:shadow-md transition-shadow">
+          <div key={vac.id} className={`bg-white p-5 rounded-lg border-l-4 border-[#002F87] shadow-sm hover:shadow-md transition-shadow ${!vac.isVisible ? 'opacity-60 bg-gray-50' : ''}`}>
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3">
                    <h3 className="text-lg font-bold text-[#002E58] mb-1">{vac.prevention}</h3>
                    {vac.promoted && <span className="text-xs bg-[#8CC63F]/20 text-[#4E9D2D] px-2 py-0.5 rounded font-bold border border-[#8CC63F]">Oferta</span>}
+                   {!vac.isVisible && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold">Oculto</span>}
                 </div>
                 
                 <p className="text-gray-600 text-sm mb-3">{vac.diseaseDescription}</p>
@@ -958,12 +970,22 @@ const DiseasesDictionaryView = ({ vaccines, onSelectVaccine }) => {
                    Biológico: {vac.name}
                 </div>
               </div>
-              <button 
-                onClick={() => onSelectVaccine(vac)}
-                className="self-start md:self-center px-4 py-2 text-sm font-medium text-[#002F87] bg-white border border-gray-200 rounded-lg hover:bg-[#F4F7F9] whitespace-nowrap"
-              >
-                Ver Vacuna
-              </button>
+              <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={() => onSelectVaccine(vac)}
+                    className="self-start md:self-center px-4 py-2 text-sm font-medium text-[#002F87] bg-white border border-gray-200 rounded-lg hover:bg-[#F4F7F9] whitespace-nowrap flex items-center gap-2"
+                  >
+                    {isAdmin && <Edit3 size={14}/>} {isAdmin ? 'Editar / Ver' : 'Ver Vacuna'}
+                  </button>
+                  {isAdmin && (
+                      <button 
+                        onClick={() => onToggleVisibility(vac)}
+                        className={`self-start md:self-center px-4 py-1 text-xs font-medium border rounded-lg whitespace-nowrap ${vac.isVisible ? 'text-gray-500 border-gray-200 hover:text-red-500' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
+                      >
+                        {vac.isVisible ? 'Ocultar Enfermedad' : 'Mostrar Enfermedad'}
+                      </button>
+                  )}
+              </div>
             </div>
           </div>
         ))}
@@ -1007,7 +1029,6 @@ const PromotionsView = ({ vaccines, onSelect }) => {
   );
 };
 
-// NUEVA VISTA: Esquema Pediátrico Interactivo
 const PediatricSchemeView = ({ vaccines, schedule, onSelectVaccine, isAdmin, onEditSchedule }) => {
   return (
     <div className="space-y-6">
@@ -1069,7 +1090,7 @@ const PediatricSchemeView = ({ vaccines, schedule, onSelectVaccine, isAdmin, onE
   );
 };
 
-const VaccinesListView = ({ vaccines, categoryFilter, onSelect, isAdmin, onToggleVisibility, onTogglePromo, onDelete }) => {
+const VaccinesListView = ({ vaccines, categoryFilter, onSelect, isAdmin, onToggleVisibility, onTogglePromo, onRequestDelete }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const filteredData = useMemo(() => {
@@ -1120,7 +1141,7 @@ const VaccinesListView = ({ vaccines, categoryFilter, onSelect, isAdmin, onToggl
               isAdmin={isAdmin}
               onToggleVisibility={onToggleVisibility}
               onTogglePromo={onTogglePromo}
-              onDelete={onDelete}
+              onRequestDelete={onRequestDelete}
             />
           ))}
         </div>
@@ -1169,22 +1190,28 @@ const LifecycleView = ({ onSelectCategory }) => {
   );
 };
 
-const LocationView = () => (
+const LocationView = ({ isAdmin, locationData, onEdit }) => (
   <div className="max-w-4xl mx-auto space-y-6">
-    <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-      <h2 className="text-2xl font-bold text-[#002E58] mb-6 flex items-center gap-2">
-        <MapPin className="text-[#002F87]" /> Ubicación y Horarios
-      </h2>
+    <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 relative">
+      <div className="flex justify-between items-start mb-6">
+        <h2 className="text-2xl font-bold text-[#002E58] flex items-center gap-2">
+            <MapPin className="text-[#002F87]" /> Ubicación y Horarios
+        </h2>
+        {isAdmin && (
+            <button onClick={onEdit} className="flex items-center gap-2 px-4 py-2 bg-[#002F87] text-white rounded-lg text-sm font-bold hover:bg-[#002E58]">
+                <Edit3 size={16}/> Editar Información
+            </button>
+        )}
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-6">
+      <div className="space-y-6">
           <div className="flex items-start gap-4">
             <div className="bg-[#00B4E3]/10 p-3 rounded-lg text-[#0071A3]"><Clock size={24} /></div>
             <div>
               <h3 className="font-bold text-[#002E58] text-lg">Horario de Atención</h3>
               <ul className="mt-2 space-y-1 text-gray-600">
                 <li className="flex justify-between w-full md:w-80">
-                  <span className="font-medium">Todos los días:</span> 8:00 AM - 6:00 PM
+                  <span className="whitespace-pre-wrap">{locationData.hours}</span>
                 </li>
               </ul>
             </div>
@@ -1195,9 +1222,8 @@ const LocationView = () => (
             <div>
               <h3 className="font-bold text-[#002E58] text-lg">Dirección</h3>
               <p className="mt-1 text-gray-600">
-                <strong>Centro Médico Colsanitas Premium Calle 96</strong><br/>
-                Carrera 14 #96-22<br/>
-                Bogotá, Colombia.
+                <strong>{locationData.placeName}</strong><br/>
+                {locationData.address}
               </p>
             </div>
           </div>
@@ -1206,49 +1232,58 @@ const LocationView = () => (
             <div className="bg-[#002F87]/10 p-3 rounded-lg text-[#002F87]"><Phone size={24} /></div>
             <div>
               <h3 className="font-bold text-[#002E58] text-lg">Contacto Directo</h3>
-              <p className="mt-1 text-gray-600 text-lg">Tel: <strong>5895455</strong></p>
-              <p className="text-gray-600">Extensión Vacunación: <strong>5718033</strong></p>
+              <p className="mt-1 text-gray-600 text-lg">Tel: <strong>{locationData.phone}</strong></p>
+              <p className="text-gray-600">Extensión Vacunación: <strong>{locationData.ext}</strong></p>
             </div>
           </div>
-        </div>
-
-        <div className="bg-[#F4F7F9] rounded-xl h-64 md:h-full flex items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-[#002E58]/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <p className="text-[#002E58] font-bold">Abrir en Mapas</p>
-          </div>
-          <MapPin size={48} className="text-[#8C9DA3] mb-2" />
-          <span className="text-[#8C9DA3] font-medium">Mapa de Ubicación</span>
-        </div>
       </div>
     </div>
   </div>
 );
 
-const FAQView = () => (
+const FAQView = ({ isAdmin, faqs, onAdd, onEdit, onDelete }) => (
   <div className="max-w-3xl mx-auto">
-    <div className="mb-6 text-center">
+    <div className="mb-6 text-center relative">
       <h2 className="text-2xl font-bold text-[#002E58]">Preguntas Frecuentes</h2>
       <p className="text-[#8C9DA3]">Respuestas rápidas para consultas comunes de pacientes.</p>
+      {isAdmin && (
+          <button onClick={onAdd} className="absolute right-0 top-0 mt-2 md:mt-0 px-4 py-2 bg-[#002F87] text-white rounded-lg text-sm font-bold hover:bg-[#002E58] flex items-center gap-2">
+              <Plus size={16}/> Nueva Pregunta
+          </button>
+      )}
     </div>
     
     <div className="space-y-4">
-      {faqData.map((item, idx) => (
-        <details key={idx} className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <summary className="flex items-center justify-between p-5 cursor-pointer list-none bg-white hover:bg-[#F4F7F9] transition-colors">
+      {faqs.map((item) => (
+        <details key={item.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+          <summary className="flex items-center justify-between p-5 cursor-pointer list-none bg-white hover:bg-[#F4F7F9] transition-colors pr-12">
             <span className="font-bold text-[#002E58] flex items-center gap-3">
-              <HelpCircle size={20} className="text-[#00B4E3]" />
+              <HelpCircle size={20} className="text-[#00B4E3] flex-shrink-0" />
               {item.q}
             </span>
-            <ChevronDown className="text-gray-400 group-open:rotate-180 transition-transform" />
+            <ChevronDown className="text-gray-400 group-open:rotate-180 transition-transform flex-shrink-0" />
           </summary>
-          <div className="px-5 pb-5 pt-0 text-gray-600 leading-relaxed border-t border-gray-100 mt-2 pt-4">
+          {isAdmin && (
+              <div className="absolute top-4 right-12 flex gap-2">
+                  <button onClick={() => onEdit(item)} className="p-1 text-gray-400 hover:text-[#002F87]" title="Editar"><Edit3 size={16}/></button>
+                  <button onClick={() => onDelete(item.id)} className="p-1 text-gray-400 hover:text-red-500" title="Eliminar"><Trash2 size={16}/></button>
+              </div>
+          )}
+          <div className="px-5 pb-5 pt-0 text-gray-600 leading-relaxed border-t border-gray-100 mt-2 pt-4 pl-12">
             {item.a}
           </div>
         </details>
       ))}
+      {faqs.length === 0 && (
+          <div className="text-center py-8 text-gray-400 italic border-2 border-dashed rounded-xl">
+              No hay preguntas frecuentes registradas.
+          </div>
+      )}
     </div>
   </div>
 );
+
+// --- COMPONENTE PRINCIPAL ---
 
 export default function VademecumApp() {
   const [currentView, setCurrentView] = useState('list');
@@ -1259,21 +1294,50 @@ export default function VademecumApp() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  
+  // Modales nuevos
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [editingFaq, setEditingFaq] = useState(null); // null = cerrado, 'new' = nuevo, obj = editar
+  
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  
   const [vaccines, setVaccines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toasts, setToasts] = useState([]);
 
-  // ESTADO PARA EL ESQUEMA PEDIÁTRICO
-  const [pediatricSchedule, setPediatricSchedule] = useState(() => {
-    // Intentar cargar esquema modificado del localStorage
-    try {
-      const savedSchedule = localStorage.getItem('pediatricSchedule');
-      return savedSchedule ? JSON.parse(savedSchedule) : initialPediatricSchedule;
-    } catch (e) {
-      return initialPediatricSchedule;
-    }
+  // Estados locales para nuevas funcionalidades
+  const [locationData, setLocationData] = useState(() => {
+      try { return JSON.parse(localStorage.getItem('locationData')) || initialLocationData; } 
+      catch { return initialLocationData; }
   });
 
-  const [editingScheduleItem, setEditingScheduleItem] = useState(null); // Qué mes se está editando
+  const [faqs, setFaqs] = useState(() => {
+      try { return JSON.parse(localStorage.getItem('faqs')) || initialFaqs; }
+      catch { return initialFaqs; }
+  });
+
+  const [pediatricSchedule, setPediatricSchedule] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pediatricSchedule')) || initialPediatricSchedule; } 
+    catch { return initialPediatricSchedule; }
+  });
+
+  const [editingScheduleItem, setEditingScheduleItem] = useState(null);
+
+  // Helper para Toasts
+  const showToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+  
+  const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  // PERSISTENCIA LOCAL (Simulada para demo)
+  useEffect(() => { localStorage.setItem('pediatricSchedule', JSON.stringify(pediatricSchedule)); }, [pediatricSchedule]);
+  useEffect(() => { localStorage.setItem('locationData', JSON.stringify(locationData)); }, [locationData]);
+  useEffect(() => { localStorage.setItem('faqs', JSON.stringify(faqs)); }, [faqs]);
 
   // CONEXIÓN CON FIREBASE
   useEffect(() => {
@@ -1285,16 +1349,12 @@ export default function VademecumApp() {
 
     const unsubscribe = onSnapshot(collection(db, "vaccines"), 
       (snapshot) => {
-        if (snapshot.empty) {
-          setVaccines([]);
-        } else {
-          const vaccineList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setVaccines(vaccineList);
-        }
+        if (snapshot.empty) setVaccines([]);
+        else setVaccines(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setLoading(false);
       },
       (error) => {
-        console.error("Error conectando a Firebase:", error);
+        console.warn("Fallback a local por error de permisos/conexión:", error);
         setVaccines(initialVaccineDatabase);
         setLoading(false);
       }
@@ -1303,36 +1363,67 @@ export default function VademecumApp() {
     return () => unsubscribe();
   }, []);
 
-  // Guardar esquema personalizado en LocalStorage
-  useEffect(() => {
-    localStorage.setItem('pediatricSchedule', JSON.stringify(pediatricSchedule));
-  }, [pediatricSchedule]);
+  // CRUD HANDLERS
+  const handleUpdateLocation = (newData) => {
+      setLocationData(newData);
+  };
+
+  const handleSaveFaq = (faqData) => {
+      if (editingFaq === 'new') {
+          setFaqs(prev => [...prev, { ...faqData, id: Date.now() }]);
+          showToast("Pregunta agregada", "success");
+      } else {
+          setFaqs(prev => prev.map(f => f.id === editingFaq.id ? { ...f, ...faqData } : f));
+          showToast("Pregunta actualizada", "success");
+      }
+  };
+
+  const handleDeleteFaq = (id) => {
+      setConfirmModal({
+          isOpen: true,
+          title: "Eliminar Pregunta",
+          message: "¿Estás seguro de que deseas eliminar esta pregunta?",
+          onConfirm: () => {
+              setFaqs(prev => prev.filter(f => f.id !== id));
+              showToast("Pregunta eliminada", "info");
+          }
+      });
+  };
 
   const seedDatabase = async () => {
-    if (!db) return alert("Firebase no configurado. Estás en modo local.");
-    if (!confirm("¿Seguro que deseas subir la base de datos inicial? Esto podría sobrescribir datos.")) return;
-    
-    try {
-      for (const vac of initialVaccineDatabase) {
-        await setDoc(doc(db, "vaccines", vac.id), vac);
-      }
-      alert("Base de datos cargada exitosamente!");
-    } catch (e) {
-      console.error(e);
-      alert("Error cargando base de datos: " + e.message);
+    if (!db) {
+        showToast("Firebase no configurado. Estás en modo local.", "error");
+        return;
     }
+    setConfirmModal({
+        isOpen: true,
+        title: "Cargar Base de Datos",
+        message: "¿Seguro que deseas subir la base de datos inicial? Esto podría sobrescribir datos existentes.",
+        onConfirm: async () => {
+             try {
+              for (const vac of initialVaccineDatabase) {
+                await setDoc(doc(db, "vaccines", vac.id), vac);
+              }
+              showToast("Base de datos cargada exitosamente!", "success");
+            } catch (e) {
+              console.error(e);
+              showToast("Error cargando base de datos: " + e.message, "error");
+            }
+        }
+    });
   };
 
   const handleUpdateVaccine = async (updatedVac) => {
     if (db) {
       try {
         await updateDoc(doc(db, "vaccines", updatedVac.id), updatedVac);
+        showToast("Cambios guardados", "success");
       } catch (e) {
-        alert("Error guardando cambios: " + e.message);
+        showToast("Error guardando cambios (Modo solo lectura en esta demo)", "error");
       }
     } else {
       setVaccines(prev => prev.map(v => v.id === updatedVac.id ? updatedVac : v));
-      alert("Cambio guardado localmente (Modo Demo).");
+      showToast("Cambio guardado localmente", "success");
     }
     setSelectedVaccine(updatedVac);
   };
@@ -1341,21 +1432,32 @@ export default function VademecumApp() {
     if (db) {
       try {
         await setDoc(doc(db, "vaccines", newVac.id), newVac);
-        alert("Biológico agregado exitosamente.");
-      } catch (e) { alert("Error: " + e.message); }
+        showToast("Biológico agregado exitosamente", "success");
+      } catch (e) { showToast("Error: " + e.message, "error"); }
     } else {
       setVaccines(prev => [...prev, newVac]);
-      alert("Biológico agregado (Modo Demo).");
+      showToast("Biológico agregado (Local)", "success");
     }
+  };
+
+  const handleDeleteRequest = (vac) => {
+      setConfirmModal({
+          isOpen: true,
+          title: "Eliminar Biológico",
+          message: `¿Estás seguro de eliminar ${vac.name} permanentemente?`,
+          onConfirm: () => handleDeleteVaccine(vac)
+      });
   };
 
   const handleDeleteVaccine = async (vac) => {
     if (db) {
       try {
         await deleteDoc(doc(db, "vaccines", vac.id));
-      } catch (e) { alert("Error: " + e.message); }
+        showToast("Biológico eliminado", "info");
+      } catch (e) { showToast("Error: " + e.message, "error"); }
     } else {
       setVaccines(prev => prev.filter(v => v.id !== vac.id));
+      showToast("Biológico eliminado (Local)", "info");
     }
   };
 
@@ -1363,7 +1465,7 @@ export default function VademecumApp() {
     if (db) {
       try {
         await updateDoc(doc(db, "vaccines", vac.id), { isVisible: !vac.isVisible });
-      } catch (e) { alert("Error: " + e.message); }
+      } catch (e) { showToast("Error: " + e.message, "error"); }
     } else {
       setVaccines(prev => prev.map(v => v.id === vac.id ? { ...v, isVisible: !v.isVisible } : v));
     }
@@ -1373,22 +1475,21 @@ export default function VademecumApp() {
     if (db) {
       try {
         await updateDoc(doc(db, "vaccines", vac.id), { promoted: !vac.promoted });
-      } catch (e) { alert("Error: " + e.message); }
+      } catch (e) { showToast("Error: " + e.message, "error"); }
     } else {
       setVaccines(prev => prev.map(v => v.id === vac.id ? { ...v, promoted: !v.promoted } : v));
     }
   };
 
-  // MANEJO DE EDICIÓN DE ESQUEMA
   const handleScheduleSave = (newVaccineIds) => {
     if (!editingScheduleItem) return;
-    
     setPediatricSchedule(prev => prev.map(item => 
       item.age === editingScheduleItem.age 
         ? { ...item, vaccineIds: newVaccineIds } 
         : item
     ));
     setEditingScheduleItem(null);
+    showToast("Esquema actualizado", "success");
   };
 
   const navItems = [
@@ -1418,6 +1519,8 @@ export default function VademecumApp() {
   return (
     <div className="min-h-screen bg-[#F4F7F9] flex font-sans text-slate-800">
       
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+
       <aside className="hidden md:flex flex-col w-64 bg-[#002E58] text-white fixed h-full z-20 shadow-xl transition-all">
         <div className={`p-6 border-b ${isAdmin ? 'border-[#8CC63F] bg-[#002E58]' : 'border-[#002F87]'}`}>
           <div className="flex items-center gap-3 text-white mb-2">
@@ -1472,7 +1575,14 @@ export default function VademecumApp() {
           )}
 
           <button 
-            onClick={() => isAdmin ? setIsAdmin(false) : setShowLoginModal(true)}
+            onClick={() => {
+                if (isAdmin) {
+                    setIsAdmin(false);
+                    showToast("Sesión de administrador cerrada", "info");
+                } else {
+                    setShowLoginModal(true);
+                }
+            }}
             className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${isAdmin ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#002F87] text-[#00B4E3] hover:bg-[#0071A3] hover:text-white'}`}
           >
             {isAdmin ? (
@@ -1557,7 +1667,7 @@ export default function VademecumApp() {
                 <div className="bg-[#8CC63F]/20 border-l-4 border-[#8CC63F] text-[#4E9D2D] p-4 mb-6 rounded shadow-sm flex items-center justify-between">
                   <div>
                     <p className="font-bold">Modo Demostración (Local)</p>
-                    <p className="text-sm">Estás viendo datos de prueba. Para guardar cambios en la nube, configura las credenciales de Firebase en el código.</p>
+                    <p className="text-sm">Estás viendo datos de prueba. Configuración de Firebase pendiente.</p>
                   </div>
                   <WifiOff size={24} className="opacity-50"/>
                 </div>
@@ -1571,7 +1681,7 @@ export default function VademecumApp() {
                   isAdmin={isAdmin}
                   onToggleVisibility={toggleVisibility}
                   onTogglePromo={togglePromo}
-                  onDelete={handleDeleteVaccine}
+                  onRequestDelete={handleDeleteRequest}
                 />
               )}
 
@@ -1580,7 +1690,12 @@ export default function VademecumApp() {
               )}
 
               {currentView === 'diseases' && (
-                <DiseasesDictionaryView vaccines={vaccines} onSelectVaccine={setSelectedVaccine} />
+                <DiseasesDictionaryView 
+                    vaccines={vaccines} 
+                    onSelectVaccine={setSelectedVaccine} 
+                    isAdmin={isAdmin}
+                    onToggleVisibility={toggleVisibility}
+                />
               )}
 
               {currentView === 'pediatric_scheme' && (
@@ -1598,11 +1713,21 @@ export default function VademecumApp() {
               )}
 
               {currentView === 'location' && (
-                <LocationView />
+                <LocationView 
+                    isAdmin={isAdmin} 
+                    locationData={locationData} 
+                    onEdit={() => setEditingLocation(true)}
+                />
               )}
 
               {currentView === 'faq' && (
-                <FAQView />
+                <FAQView 
+                    isAdmin={isAdmin}
+                    faqs={faqs}
+                    onAdd={() => setEditingFaq('new')}
+                    onEdit={(item) => setEditingFaq(item)}
+                    onDelete={handleDeleteFaq}
+                />
               )}
             </>
           )}
@@ -1620,12 +1745,14 @@ export default function VademecumApp() {
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)}
         onLogin={() => setIsAdmin(true)}
+        showToast={showToast}
       />
 
       <AddVaccineModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={handleAddVaccine}
+        showToast={showToast}
       />
 
       <ScheduleEditModal 
@@ -1635,6 +1762,29 @@ export default function VademecumApp() {
         currentVaccineIds={editingScheduleItem?.vaccineIds}
         allVaccines={vaccines}
         onSave={handleScheduleSave}
+      />
+
+      <EditLocationModal 
+        isOpen={editingLocation}
+        onClose={() => setEditingLocation(false)}
+        locationData={locationData}
+        onSave={handleUpdateLocation}
+        showToast={showToast}
+      />
+
+      <EditFAQModal 
+        isOpen={!!editingFaq}
+        onClose={() => setEditingFaq(null)}
+        faq={editingFaq === 'new' ? null : editingFaq}
+        onSave={handleSaveFaq}
+      />
+      
+      <ConfirmationModal 
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
