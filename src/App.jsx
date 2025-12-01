@@ -4,11 +4,12 @@ import {
   Filter, BookOpen, MapPin, Clock, Phone, HelpCircle, 
   Users, Baby, Plane, BriefcaseMedical, Menu, ChevronRight, ChevronDown, 
   Stethoscope, Book, TicketPercent, Lock, Unlock, Eye, EyeOff, Save, Edit3, CloudUpload, WifiOff, Plus, Trash2,
-  CalendarCheck, Settings2, CheckSquare, Square, CheckCircle, AlertCircle, User, LogOut
+  CalendarCheck, Settings2, CheckSquare, Square, CheckCircle, AlertCircle, User, LogOut,
+  // IMPORTANTE: Renombramos 'Map' a 'MapIcon' para evitar conflictos con el objeto Map de JS que usa Firebase
+  Map as MapIcon 
 } from 'lucide-react';
 
 // --- IMPORTAR FIREBASE ---
-// Se agregan getApps y getApp para evitar reinicializaciones dobles
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc 
@@ -17,7 +18,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged 
 } from "firebase/auth";
 
-// --- CONFIGURACIÓN DE FIREBASE (Datos del usuario) ---
+// --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyAeePk1erddZcP3LrLALMfjLeAIGtUzS5A",
   authDomain: "vademecum-keralty.firebaseapp.com",
@@ -31,35 +32,33 @@ const firebaseConfig = {
 let app = null;
 let db = null;
 let auth = null;
-let firebaseError = null; // Para mostrar errores de conexión en pantalla
+let firebaseError = null;
 
 try {
-  // Verificamos que la configuración tenga una API Key real
-  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
-    // Verificamos si ya existe una instancia para no crearla dos veces (Error común en React)
-    if (getApps().length === 0) {
-      app = initializeApp(firebaseConfig);
-    } else {
-      app = getApp(); // Usamos la instancia existente
-    }
-    
-    db = getFirestore(app);
-    auth = getAuth(app);
+  // Inicialización simplificada y robusta
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
   }
+  
+  db = getFirestore(app);
+  auth = getAuth(app);
+  
 } catch (e) {
-  console.error("Error crítico inicializando Firebase:", e);
-  firebaseError = e.message; // Guardamos el error para mostrarlo
+  console.error("Error inicializando Firebase:", e);
+  firebaseError = e.message;
 }
 
 // --- COLORES CORPORATIVOS ---
 const THEME = {
-    blueDeep: '#002E58',   // Pantone 288 C
-    blueMain: '#002F87',   // Pantone 287 C
-    blueLight: '#0071A3',  // Pantone 307 C
-    cyan: '#00B4E3',       // Pantone 306 C
-    greenLight: '#8CC63F', // Pantone 376 C
-    greenTeal: '#00B288',  // Pantone 339 C
-    gray: '#8C9DA3',       // Pantone 400 C
+    blueDeep: '#002E58',
+    blueMain: '#002F87',
+    blueLight: '#0071A3',
+    cyan: '#00B4E3',
+    greenLight: '#8CC63F',
+    greenTeal: '#00B288',
+    gray: '#8C9DA3',
 };
 
 // --- BASE DE DATOS LOCAL (Respaldo) ---
@@ -1268,7 +1267,7 @@ const LocationView = ({ isAdmin, locationData, onEdit }) => (
           </div>
 
           <div className="flex items-start gap-4">
-            <div className="bg-[#00B288]/10 p-3 rounded-lg text-[#00B288]"><MapPin size={24} /></div>
+            <div className="bg-[#00B288]/10 p-3 rounded-lg text-[#00B288]"><MapIcon size={24} /></div>
             <div>
               <h3 className="font-bold text-[#002E58] text-lg">Dirección</h3>
               <p className="mt-1 text-gray-600">
