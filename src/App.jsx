@@ -4,14 +4,18 @@ import {
   Filter, BookOpen, MapPin, Clock, Phone, HelpCircle, 
   Users, Baby, Plane, BriefcaseMedical, Menu, ChevronRight, ChevronDown, 
   Stethoscope, Book, TicketPercent, Lock, Unlock, Eye, EyeOff, Save, Edit3, CloudUpload, WifiOff, Plus, Trash2,
-  CalendarCheck, Settings2, CheckSquare, Square, CheckCircle, AlertCircle, Map
+  CalendarCheck, Settings2, CheckSquare, Square, CheckCircle, AlertCircle, User, LogOut
 } from 'lucide-react';
 
 // --- IMPORTAR FIREBASE ---
-import { initializeApp } from "firebase/app";
+// Se agregan getApps y getApp para evitar reinicializaciones dobles
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc 
 } from "firebase/firestore";
+import { 
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged 
+} from "firebase/auth";
 
 // --- CONFIGURACIÓN DE FIREBASE (Datos del usuario) ---
 const firebaseConfig = {
@@ -23,15 +27,28 @@ const firebaseConfig = {
   appId: "1:180320538220:web:bf0d99772ea2cec7c85249"
 };
 
-// Inicializar Firebase de forma segura con fallback
+// Inicializar Firebase de forma segura con Singleton Pattern
+let app = null;
 let db = null;
+let auth = null;
+let firebaseError = null; // Para mostrar errores de conexión en pantalla
+
 try {
-  if (firebaseConfig.apiKey !== "TU_API_KEY") {
-    const app = initializeApp(firebaseConfig);
+  // Verificamos que la configuración tenga una API Key real
+  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
+    // Verificamos si ya existe una instancia para no crearla dos veces (Error común en React)
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApp(); // Usamos la instancia existente
+    }
+    
     db = getFirestore(app);
+    auth = getAuth(app);
   }
 } catch (e) {
-  console.warn("Firebase no disponible o error de configuración. Iniciando modo offline.", e);
+  console.error("Error crítico inicializando Firebase:", e);
+  firebaseError = e.message; // Guardamos el error para mostrarlo
 }
 
 // --- COLORES CORPORATIVOS ---
@@ -597,23 +614,40 @@ const ScheduleEditModal = ({ isOpen, onClose, ageGroup, allVaccines, currentVacc
 };
 
 const LoginModal = ({ isOpen, onClose, onLogin, showToast }) => {
-  const [code, setCode] = useState('');
-  const [error, setError] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (code === '1234') { 
-      onLogin();
-      onClose();
-      setCode('');
-      setError(false);
-      showToast("Bienvenido, Administrador", "success");
+    setLoading(true);
+
+    if (auth) {
+        // MODO FIREBASE AUTH
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            onLogin();
+            onClose();
+            showToast("Sesión iniciada correctamente", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Error de autenticación: Verifica tus credenciales", "error");
+        }
     } else {
-      setError(true);
-      showToast("Código incorrecto", "error");
+        // MODO LOCAL (FALLBACK)
+        if (password === '1234') { 
+          onLogin();
+          onClose();
+          showToast("Bienvenido, Administrador (Local)", "success");
+        } else {
+          showToast("Código incorrecto", "error");
+        }
     }
+    setLoading(false);
+    // Limpiar campos
+    setPassword('');
   };
 
   return (
@@ -624,21 +658,37 @@ const LoginModal = ({ isOpen, onClose, onLogin, showToast }) => {
           Acceso Administrativo
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {auth && (
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                <input 
+                type="email" 
+                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-[#00B4E3] outline-none"
+                placeholder="admin@keralty.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoFocus
+                />
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Código de Acceso</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+                {auth ? 'Contraseña' : 'Código de Acceso'}
+            </label>
             <input 
               type="password" 
               className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-[#00B4E3] outline-none"
-              placeholder="Ingrese código..."
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoFocus
+              placeholder={auth ? "••••••" : "Ingrese código..."}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoFocus={!auth}
             />
-            {error && <p className="text-red-500 text-xs mt-1">Código incorrecto. Intente '1234'</p>}
           </div>
           <div className="flex gap-2 justify-end">
             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
-            <button type="submit" className="px-4 py-2 bg-[#002F87] text-white rounded-lg hover:bg-[#002E58]">Ingresar</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 bg-[#002F87] text-white rounded-lg hover:bg-[#002E58] disabled:opacity-50">
+                {loading ? 'Verificando...' : 'Ingresar'}
+            </button>
           </div>
         </form>
       </div>
@@ -1339,6 +1389,20 @@ export default function VademecumApp() {
   useEffect(() => { localStorage.setItem('locationData', JSON.stringify(locationData)); }, [locationData]);
   useEffect(() => { localStorage.setItem('faqs', JSON.stringify(faqs)); }, [faqs]);
 
+  // Manejo de Auth State
+  useEffect(() => {
+    if (auth) {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setIsAdmin(true);
+            } else {
+                setIsAdmin(false);
+            }
+        });
+        return () => unsubscribe();
+    }
+  }, []);
+
   // CONEXIÓN CON FIREBASE
   useEffect(() => {
     if (!db) {
@@ -1516,6 +1580,17 @@ export default function VademecumApp() {
     }
   };
 
+  const handleLogout = () => {
+      if (auth) {
+          signOut(auth).then(() => {
+              showToast("Sesión cerrada", "info");
+          });
+      } else {
+          setIsAdmin(false);
+          showToast("Sesión local cerrada", "info");
+      }
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F7F9] flex font-sans text-slate-800">
       
@@ -1529,7 +1604,12 @@ export default function VademecumApp() {
           </div>
           <p className="text-xs text-[#8C9DA3] opacity-80 mb-2">Enfermería y Medicina</p>
           {isAdmin && <span className="text-[10px] bg-[#8CC63F] text-[#002E58] px-2 py-0.5 rounded font-bold uppercase">Modo Admin Activo</span>}
-          {!db && <span className="block mt-1 text-[10px] bg-gray-500 text-white px-2 py-0.5 rounded font-bold uppercase flex items-center gap-1 w-fit"><WifiOff size={10}/> Modo Local</span>}
+          {!db && (
+            <div className="block mt-1 text-[10px] bg-gray-500 text-white px-2 py-1 rounded font-bold uppercase flex flex-col gap-1 w-fit">
+                <span className="flex items-center gap-1"><WifiOff size={10}/> Modo Local</span>
+                {firebaseError && <span className="text-[8px] opacity-75">{firebaseError}</span>}
+            </div>
+          )}
         </div>
         <nav className="flex-1 py-6 px-3 space-y-2">
           {navItems.map(item => (
@@ -1577,8 +1657,7 @@ export default function VademecumApp() {
           <button 
             onClick={() => {
                 if (isAdmin) {
-                    setIsAdmin(false);
-                    showToast("Sesión de administrador cerrada", "info");
+                    handleLogout();
                 } else {
                     setShowLoginModal(true);
                 }
@@ -1586,13 +1665,13 @@ export default function VademecumApp() {
             className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${isAdmin ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#002F87] text-[#00B4E3] hover:bg-[#0071A3] hover:text-white'}`}
           >
             {isAdmin ? (
-              <> <Unlock size={16} /> Salir Admin </>
+              <> <LogOut size={16} /> Salir Admin </>
             ) : (
               <> <Lock size={16} /> Acceso Admin </>
             )}
           </button>
           <div className="mt-4 text-[10px] text-center text-[#8C9DA3]">
-            v3.5 • Keralty ID
+            v3.6 • Keralty ID
           </div>
         </div>
       </aside>
@@ -1645,10 +1724,10 @@ export default function VademecumApp() {
               </button>
             )}
             <button 
-              onClick={() => { setIsMobileMenuOpen(false); isAdmin ? setIsAdmin(false) : setShowLoginModal(true); }}
+              onClick={() => { setIsMobileMenuOpen(false); isAdmin ? handleLogout() : setShowLoginModal(true); }}
               className={`w-full py-4 rounded-xl text-lg font-bold flex items-center justify-center gap-2 ${isAdmin ? 'bg-red-500' : 'bg-[#002F87] text-[#00B4E3]'}`}
             >
-               {isAdmin ? <><Unlock/> Cerrar Admin</> : <><Lock/> Admin</>}
+               {isAdmin ? <><LogOut/> Cerrar Admin</> : <><Lock/> Admin</>}
             </button>
           </div>
         </div>
